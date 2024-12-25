@@ -1,6 +1,8 @@
 # golangloader
 
-Translation files is rewritten from [go-playground/validator](https://github.com/go-playground/validator/tree/master/translations)
+An improved translation package to help developers to customize the localization of the field names.  Furthermore, it also supports loading from .json files.
+
+Note: Translation files is rewritten from [go-playground/validator](https://github.com/go-playground/validator)
 
 # Basic Usage
 
@@ -15,7 +17,7 @@ Create a json file on `./lang/en/validation.json` in your project:
 }
 ```
 
-Example of how to use golangloader with go-playground/validator
+Example of how to use golangloader with [go-playground/validator](https://github.com/go-playground/validator)
 
 ```go
 package main
