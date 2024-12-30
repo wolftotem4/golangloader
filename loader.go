@@ -3,6 +3,8 @@ package golangloader
 import (
 	"encoding/json"
 	"fmt"
+	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -12,7 +14,12 @@ import (
 
 // loads the translations from the .json files in the specified directory
 func LoadTranslate(dir string, uni *ut.UniversalTranslator) error {
-	dirs, err := os.ReadDir(dir)
+	return LoadTranslateFS(os.DirFS(dir), uni)
+}
+
+// loads the translations from the .json files in the specified directory
+func LoadTranslateFS(fsys fs.FS, uni *ut.UniversalTranslator) error {
+	dirs, err := fs.ReadDir(fsys, ".")
 	if err != nil {
 		return err
 	}
@@ -28,7 +35,12 @@ func LoadTranslate(dir string, uni *ut.UniversalTranslator) error {
 			continue
 		}
 
-		err := filepath.Walk(filepath.Join("lang", locale), func(path string, info os.FileInfo, err error) error {
+		subFS, err := fs.Sub(fsys, locale)
+		if err != nil {
+			return err
+		}
+
+		err = fs.WalkDir(subFS, ".", func(name string, info fs.DirEntry, err error) error {
 			if err != nil {
 				return err
 			}
@@ -42,7 +54,12 @@ func LoadTranslate(dir string, uni *ut.UniversalTranslator) error {
 				return nil
 			}
 
-			content, err := os.ReadFile(path)
+			fh, err := subFS.Open(name)
+			if err != nil {
+				return err
+			}
+
+			content, err := io.ReadAll(fh)
 			if err != nil {
 				return err
 			}
@@ -53,7 +70,18 @@ func LoadTranslate(dir string, uni *ut.UniversalTranslator) error {
 			}
 
 			for key, value := range data {
-				newKey := fmt.Sprintf("%s.%s", filepath.Base(info.Name())[:len(info.Name())-len(EXT)], key)
+				prefix := strings.ReplaceAll(filepath.Dir(name), "/", ".")
+				if os.PathSeparator != '/' {
+					prefix = strings.ReplaceAll(filepath.Dir(name), string(os.PathSeparator), ".")
+				}
+
+				var newKey string
+				if prefix == "." {
+					newKey = fmt.Sprintf("%s.%s", filepath.Base(info.Name())[:len(info.Name())-len(EXT)], key)
+				} else {
+					newKey = fmt.Sprintf("%s.%s.%s", prefix, filepath.Base(info.Name())[:len(info.Name())-len(EXT)], key)
+				}
+
 				trans.Add(newKey, value, true)
 			}
 
